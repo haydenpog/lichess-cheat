@@ -1,4 +1,4 @@
-import cv2, win32gui, win32con, win32api, pygame, os
+import cv2, win32gui, win32con, win32api, pygame, os # when in codespaces these are missing but it dont matter.
 from pyautogui import screenshot, position, click, moveTo, dragTo, mouseDown, mouseUp
 import numpy as np
 from string import ascii_lowercase
@@ -8,9 +8,20 @@ from pynput.mouse import Listener
 from ctypes import windll
 from math import ceil
 import time
+from tkinter import colorchooser
 
 
 playerColor = input('Enter your starting color (b = black / w = white): ')
+playerDepth = input("How much depth do you want? (How many moves ahead it takes in account): 1-20")
+playerElo = int(input("What is your target elo? "))
+if playerColor == "w" or "W":
+    autoPlay = bool(eval(input("Do you want to use autoplay? 1 (Yes) / 0 (No): ")))
+playerBoxColor = input("Do you want to use a custom color? Y/N")
+if playerBoxColor == "y" or "Y":
+    playerBoxColor = colorchooser.askcolor(title ="Choose color")
+    if not "tuple" in type(playerBoxColor):
+        playerBoxColor = playerBoxColor.lstrip('#')
+        playerBoxColor = tuple(int(playerBoxColor[i:i+2], 16) for i in (0, 2, 4))
 
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (0,0)
 pygame.init()
@@ -45,7 +56,7 @@ alwaysOnTop(True)
 
 def drawBox(x, y, w ,h):
     # screen.fill(fuchsia)  # Transparent background
-    pygame.draw.rect(screen, [0, 0, 255], [x-5, y-5, w+10, h+10], 5)
+    pygame.draw.rect(screen, playerBoxColor, [x-5, y-5, w+10, h+10], 5)
 
 screen.fill(fuchsia)
 
@@ -55,10 +66,10 @@ pygame.display.update()
 
 # First we import the stcokfish engine with a few adjusted parameters
 # The 7 threads is because I have 8 threads and you leave 1 for the system.
-stockfish = Stockfish(r'C:\stockfish_20090216_x64.exe', parameters={"Threads" : 7, "Ponder" : True, "Minimum Thinking Time": 20, "Skill Level": 20, "Hash":16, "Contempt": 0, "Slow Mover": 84})
-# If this parameter will get to high the accuracy will get better but it can cause
-# the entire program to crash.
-stockfish.set_depth(16)
+stockfish = Stockfish(os.getcwd() + r'/stockfish-windows-2022-x86-64.exe', parameters={"Threads" : 7, "Ponder" : True, "Minimum Thinking Time": 20, "Hash":16, "Contempt": 0, "Slow Mover": 84})
+stockfish.set_depth(playerDepth)
+stockfish.set_elo_rating(playerElo)
+
 
 # Creating the board window later on we will draw on it the board with best possible moves highlighted
 # # Prioritizing the board window over other windows
@@ -308,14 +319,6 @@ gameMoveSet = []
 # Creating a log file of the last game.
 
 logFilePath = 'logs/'+datetime.today().strftime("%d-%m-%Y %H-%M-%S")+'.txt'
-
-
-# Loading the user settings.
-f=open('config.cfg', 'r')
-autoPlay = bool(eval(f.readline().split('=')[1]))
-f.close()
-autoPlayFlag = False
-
 
 
 if playerColor == 'b':
